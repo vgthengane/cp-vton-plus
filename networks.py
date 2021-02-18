@@ -6,6 +6,7 @@ from torchvision import models
 import os
 
 import numpy as np
+from input_size import HEIGHT, WIDTH
 
 
 def weights_init_normal(m):
@@ -96,11 +97,16 @@ class FeatureCorrelation(nn.Module):
 
     def forward(self, feature_A, feature_B):
         b, c, h, w = feature_A.size()
+        # print(feature_A.shape)        
         # reshape features for matrix multiplication
+        # print(feature_A.shape, feature_B.shape)
         feature_A = feature_A.transpose(2, 3).contiguous().view(b, c, h*w)
         feature_B = feature_B.view(b, c, h*w).transpose(1, 2)
+        # print(feature_A.shape, feature_B.shape)
         # perform matrix mult.
         feature_mul = torch.bmm(feature_B, feature_A)
+        # feature_mul = torch.bmm(feature_A, feature_B)
+        # print(feature_mul.shape)
         correlation_tensor = feature_mul.view(
             b, h, w, h*w).transpose(2, 3).transpose(1, 2)
         return correlation_tensor
@@ -123,7 +129,7 @@ class FeatureRegression(nn.Module):
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
         )
-        self.linear = nn.Linear(64 * 4 * 3, output_dim)
+        self.linear = nn.Linear(64 * (HEIGHT // 64) * (WIDTH // 64), output_dim)
         self.tanh = nn.Tanh()
         if use_cuda:
             self.conv.cuda()
@@ -131,15 +137,19 @@ class FeatureRegression(nn.Module):
             self.tanh.cuda()
 
     def forward(self, x):
+        # print(f"Regression shape: {x.shape}")
         x = self.conv(x)
-        x = x.view(x.size(0), -1)
+        # print(x.shape)
+        x = torch.reshape(x, (x.shape[0], -1))
+        # print(x.shape)
+        # x = x.view(x.size(0), -1)
         x = self.linear(x)
         x = self.tanh(x)
         return x
 
 
 class AffineGridGen(nn.Module):
-    def __init__(self, out_h=256, out_w=192, out_ch=3):
+    def __init__(self, out_h=HEIGHT, out_w=WIDTH, out_ch=3):
         super(AffineGridGen, self).__init__()
         self.out_h = out_h
         self.out_w = out_w
@@ -154,7 +164,7 @@ class AffineGridGen(nn.Module):
 
 
 class TpsGridGen(nn.Module):
-    def __init__(self, out_h=256, out_w=192, use_regular_grid=True, grid_size=3, reg_factor=0, use_cuda=True):
+    def __init__(self, out_h=HEIGHT, out_w=WIDTH, use_regular_grid=True, grid_size=3, reg_factor=0, use_cuda=True):
         super(TpsGridGen, self).__init__()
         self.out_h, self.out_w = out_h, out_w
         self.reg_factor = reg_factor
@@ -509,8 +519,11 @@ class GMM(nn.Module):
             1, ngf=64, n_layers=3, norm_layer=nn.BatchNorm2d)
         self.l2norm = FeatureL2Norm()
         self.correlation = FeatureCorrelation()
+        # print(2*opt.grid_size**2)
         self.regression = FeatureRegression(
-            input_nc=192, output_dim=2*opt.grid_size**2, use_cuda=True)
+            input_nc=(opt.fine_width // 16) * (opt.fine_height // 16), 
+            output_dim=2*opt.grid_size**2, use_cuda=True
+        )
         self.gridGen = TpsGridGen(
             opt.fine_height, opt.fine_width, use_cuda=True, grid_size=opt.grid_size)
 
@@ -520,7 +533,6 @@ class GMM(nn.Module):
         featureA = self.l2norm(featureA)
         featureB = self.l2norm(featureB)
         correlation = self.correlation(featureA, featureB)
-
         theta = self.regression(correlation)
         grid = self.gridGen(theta)
         return grid, theta

@@ -11,6 +11,7 @@ from networks import GicLoss, GMM, UnetGenerator, VGGLoss, load_checkpoint, save
 
 from tensorboardX import SummaryWriter
 from visualization import board_add_image, board_add_images
+from input_size import HEIGHT, WIDTH
 
 
 def get_opt():
@@ -51,6 +52,8 @@ def get_opt():
                         help='shuffle input data')
 
     opt = parser.parse_args()
+    opt.fine_width = WIDTH
+    opt.fine_height = HEIGHT
     return opt
 
 
@@ -78,6 +81,7 @@ def train_gmm(opt, train_loader, model, board):
         agnostic = inputs['agnostic'].cuda()
         c = inputs['cloth'].cuda()
         cm = inputs['cloth_mask'].cuda()
+        # print(cm.shape, agnostic.shape)
         im_c = inputs['parse_cloth'].cuda()
         im_g = inputs['grid_image'].cuda()
 

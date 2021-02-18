@@ -10,6 +10,7 @@ import os.path as osp
 import numpy as np
 import json
 
+from input_size import HEIGHT, WIDTH
 
 class CPDataset(data.Dataset):
     """Dataset for CP-VTON+.
@@ -28,8 +29,9 @@ class CPDataset(data.Dataset):
         self.radius = opt.radius
         self.data_path = osp.join(opt.dataroot, opt.datamode)
         self.transform = transforms.Compose([
+            transforms.Resize((HEIGHT, WIDTH)),
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+            transforms.Normalize((0.5), (0.5))])
 
         # load data list
         im_names = []
@@ -51,10 +53,10 @@ class CPDataset(data.Dataset):
         im_name = self.im_names[index]
         if self.stage == 'GMM':
             c = Image.open(osp.join(self.data_path, 'cloth', c_name))
-            cm = Image.open(osp.join(self.data_path, 'cloth-mask', c_name)).convert('L')
+            cm = Image.open(osp.join(self.data_path, 'cloth-mask', c_name)).convert('L').resize((WIDTH, HEIGHT), resample=2)
         else:
             c = Image.open(osp.join(self.data_path, 'warp-cloth', im_name))    # c_name, if that is used when saved
-            cm = Image.open(osp.join(self.data_path, 'warp-mask', im_name)).convert('L')    # c_name, if that is used when saved
+            cm = Image.open(osp.join(self.data_path, 'warp-mask', im_name)).convert('L').resize((WIDTH, HEIGHT), resample=2)    # c_name, if that is used when saved
 
         c = self.transform(c)  # [-1,1]
         cm_array = np.array(cm)
@@ -98,10 +100,10 @@ class CPDataset(data.Dataset):
         im_parse = Image.open(
             # osp.join(self.data_path, 'image-parse', parse_name)).convert('L')
             osp.join(self.data_path, 'image-parse-new', parse_name)).convert('L')   # updated new segmentation
-        parse_array = np.array(im_parse)
+        parse_array = np.array(im_parse.resize((WIDTH, HEIGHT), resample=2))
         im_mask = Image.open(
             osp.join(self.data_path, 'image-mask', parse_name)).convert('L')
-        mask_array = np.array(im_mask)
+        mask_array = np.array(im_mask.resize((WIDTH, HEIGHT), resample=2))
 
         # parse_shape = (parse_array > 0).astype(np.float32)  # CP-VTON body shape
         # Get shape from body mask (CP-VTON+)
@@ -251,6 +253,8 @@ if __name__ == "__main__":
     parser.add_argument('-j', '--workers', type=int, default=1)
 
     opt = parser.parse_args()
+    opt.fine_width = WIDTH
+    opt.fine_height = HEIGHT
     dataset = CPDataset(opt)
     data_loader = CPDataLoader(opt, dataset)
 

@@ -11,6 +11,7 @@ from networks import GMM, UnetGenerator, load_checkpoint
 
 from tensorboardX import SummaryWriter
 from visualization import board_add_image, board_add_images, save_images
+from input_size import HEIGHT, WIDTH
 
 
 def get_opt():
@@ -54,6 +55,8 @@ def get_opt():
                         help='shuffle input data')
 
     opt = parser.parse_args()
+    opt.fine_width = WIDTH
+    opt.fine_height = HEIGHT
     return opt
 
 
