@@ -26,14 +26,14 @@ def get_opt():
 
     parser.add_argument("--dataroot", default="data")
 
-    # parser.add_argument("--datamode", default="train")
-    parser.add_argument("--datamode", default="test")
+    parser.add_argument("--datamode", default="train")
+    # parser.add_argument("--datamode", default="test")
 
     parser.add_argument("--stage", default="GMM")
     # parser.add_argument("--stage", default="TOM")
 
-    # parser.add_argument("--data_list", default="train_pairs.txt")
-    parser.add_argument("--data_list", default="test_pairs.txt")
+    parser.add_argument("--data_list", default="train_pairs.txt")
+    # parser.add_argument("--data_list", default="test_pairs.txt")
     # parser.add_argument("--data_list", default="test_pairs_same.txt")
 
     parser.add_argument("--fine_width", type=int, default=192)
